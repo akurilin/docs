@@ -1191,6 +1191,74 @@ async with server:
 
 ---
 
+## Pickling (serialize Python objects to disk)
+
+`pickle` turns almost any Python object (dicts, lists, dataclasses, nested graphs, even cycles) into bytes and back. Think `serde` / `Serializable` — but Python-only and **not human-readable**.
+
+```python
+import pickle
+
+# In memory: object <-> bytes
+data = {"name": "Alex", "scores": [1, 2, 3]}
+blob = pickle.dumps(data)            # → bytes
+back = pickle.loads(blob)            # bytes → object
+
+# To/from disk — note the binary mode "wb" / "rb" (pickle is bytes, not text)
+with open("data.pkl", "wb") as f:
+    pickle.dump(data, f)             # dump = write to file (no trailing 's')
+with open("data.pkl", "rb") as f:
+    back = pickle.load(f)            # load = read from file
+
+# Pathlib shortcut
+from pathlib import Path
+Path("data.pkl").write_bytes(pickle.dumps(data))
+back = pickle.loads(Path("data.pkl").read_bytes())
+```
+
+⚠️ **NEVER unpickle data you don't trust** — `pickle.load` can execute arbitrary code during deserialization. It's a remote-code-execution vector. For untrusted/cross-language data use JSON instead.
+
+⚠️ **Not portable or stable.** A pickle is tied to your Python version and your class definitions. Rename/move a class or change its module path and old pickles may fail to load. Don't use pickle as a long-term archival or interchange format — use JSON, or `pickle` only for transient caches you can regenerate.
+
+```python
+# What CAN'T be pickled: open files/sockets, threads, locks, lambdas,
+# local/nested functions, most generators. Module-level functions & classes
+# pickle fine (by reference — only the qualified NAME is stored, not the code).
+
+# Protocol = wire format version. Higher = newer/more efficient. Default is fine.
+pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL)
+
+# joblib.dump / numpy.save are better for big numpy arrays / sklearn models.
+```
+
+### Streaming: pickle and large data
+
+`dump`/`load` (the file versions) already write and read straight through the file handle — they don't build the whole byte blob in memory the way `dumps`/`loads` do. So that part is already streamed.
+
+**But** `load` rebuilds the *entire object graph at once* — there's no lazy/partial unpickling of one giant object. Streaming only helps when you have **many** records: pickle them one at a time into the same file, then read them back one at a time. A pickle file can hold multiple concatenated pickles.
+
+```python
+# Write many objects sequentially — O(1) memory, no giant list in RAM
+with open("records.pkl", "wb") as f:
+    for record in produce_records():     # could be millions
+        pickle.dump(record, f)           # each call appends one pickle
+
+# Read them back one at a time — load() stops at each object boundary
+def load_all(path):
+    with open(path, "rb") as f:
+        while True:
+            try:
+                yield pickle.load(f)     # reads exactly one object, leaves f positioned
+            except EOFError:             # ⚠️ this is how you detect "no more pickles"
+                break
+
+for record in load_all("records.pkl"):   # lazy — see Generators section
+    process(record)
+```
+
+⚠️ For a single huge object, pickle won't save memory — the whole thing materializes on load. Restructure into many small records (above) or use a format built for it (Parquet, HDF5, `numpy.save`).
+
+---
+
 ## Imports
 
 ```python

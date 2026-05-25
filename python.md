@@ -697,6 +697,14 @@ groups["a"].append(1)                # no "if 'a' not in groups" dance
 # Counter — multiset
 c = Counter("abracadabra")           # {'a': 5, 'b': 2, 'r': 2, 'c': 1, 'd': 1}
 c.most_common(2)                     # [('a', 5), ('b', 2)]
+
+# Increment / decrement a single key — missing keys read as 0 (no KeyError)
+c["x"] += 1                          # increment; the += is what inserts the key
+c["x"] -= 1                          # decrement; counts CAN go to 0 or negative
+c.update(["x", "y", "x"])            # +1 per occurrence
+c.update({"x": 5})                   # ⚠️ ADDS 5 (NOT dict.update, which REPLACES)
+c.subtract({"x": 3})                 # subtract counts (can go negative)
+
 c1 + c2                              # adds counts
 c1 - c2                              # subtract, clamped at 0
 c1 & c2                              # min, c1 | c2  → max

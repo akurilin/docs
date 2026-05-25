@@ -880,6 +880,44 @@ def greet(x: HasName) -> str:
 
 ---
 
+## Dependency injection (constructor injection)
+
+No framework needed — it's just "pass dependencies IN via `__init__` instead of building them inside." Makes code testable: swap real deps for fakes without monkeypatching.
+
+```python
+# Duck typing: the service just needs SOMETHING with a .send(to, body) method.
+# (In real code you'd declare a typing.Protocol for the dependency's shape — see
+#  Type hints. For interview speed, skip the ceremony and rely on duck typing.)
+
+class SignupService:
+    def __init__(self, mailer):              # ← injected here, not constructed inside
+        self.mailer = mailer                 # store it; the service doesn't pick the impl
+
+    def register(self, email):
+        self.mailer.send(email, "welcome")
+
+# Production: wire the real deps once, at the entry point ("composition root")
+class SmtpMailer:
+    def send(self, to, body): ...            # real implementation
+service = SignupService(SmtpMailer())
+
+# Tests: inject a fake — no mock/patch needed, just any object with a .send()
+class FakeMailer:
+    def __init__(self): self.sent = []
+    def send(self, to, body): self.sent.append((to, body))
+
+fake = FakeMailer()
+SignupService(fake).register("a@b.com")
+assert fake.sent == [("a@b.com", "welcome")]
+
+# ⚠️ Anti-pattern: building the dependency inside hardwires it & blocks testing
+class Bad:
+    def __init__(self):
+        self.mailer = SmtpMailer()           # now you can't substitute it
+```
+
+---
+
 ## Concurrency: threading
 
 ```python
@@ -1252,6 +1290,41 @@ async with server:
 
 ---
 
+## JSON
+
+The portable, human-readable, cross-language format. Use this for anything leaving your program (APIs, config, untrusted input) — contrast with [Pickling](#pickling-serialize-python-objects-to-disk) below.
+
+```python
+import json
+
+# In memory: object <-> string  (same dump/dumps naming as pickle)
+s   = json.dumps(obj)                # object → JSON string  (note the 's')
+obj = json.loads(s)                  # JSON string → object
+
+# To/from disk — TEXT mode "w"/"r" (JSON is text, unlike pickle's binary)
+with open("data.json", "w") as f:
+    json.dump(obj, f)                # dump = write to file (no 's')
+with open("data.json") as f:
+    obj = json.load(f)               # load = read from file
+
+# Output options
+json.dumps(obj, indent=2)            # pretty-printed, indented
+json.dumps(obj, sort_keys=True)      # deterministic key order
+json.dumps(obj, ensure_ascii=False)  # keep unicode literal instead of \uXXXX escapes
+
+# Type mapping: dict↔object, list/tuple→array, str↔string, int/float↔number,
+#               True/False↔true/false, None↔null
+# ⚠️ tuples come back as LISTS. dict keys come back as STRINGS (JSON keys must be strings).
+# ⚠️ NOT serializable by default: datetime, set, bytes, Decimal, dataclasses, custom objects.
+
+# Serialize the unsupported types via default= (called for anything json can't handle)
+json.dumps({"when": now}, default=str)          # stringify dates/Decimal/etc.
+from dataclasses import asdict
+json.dumps(asdict(my_dataclass))                # dataclass → dict first
+```
+
+---
+
 ## Pickling (serialize Python objects to disk)
 
 Turns almost any object (dicts, dataclasses, nested graphs, cycles) into bytes and back. Python-only, binary, not human-readable.
@@ -1300,6 +1373,42 @@ def load_all(path):
             except EOFError:             # ⚠️ how you detect end-of-file
                 break
 ```
+
+---
+
+## Gzip (compression)
+
+```python
+import gzip
+
+# In memory: bytes <-> compressed bytes
+packed = gzip.compress(b"lots of repetitive data...")   # bytes → smaller bytes
+raw    = gzip.decompress(packed)                         # back
+
+# To/from disk: gzip.open is a drop-in for open() — compresses/decompresses for you.
+# Binary mode "wb"/"rb" for bytes; text mode "wt"/"rt" needs an encoding.
+with gzip.open("data.txt.gz", "wt", encoding="utf-8") as f:
+    f.write("hello\n")               # stored compressed
+with gzip.open("data.txt.gz", "rt", encoding="utf-8") as f:
+    text = f.read()                  # read back decompressed
+
+with gzip.open("blob.gz", "wb", compresslevel=6) as f:   # 1=fast … 9=smallest (default 9)
+    f.write(b"...")
+
+# It's a normal file object → lazy line/chunk iteration works, O(1) memory on huge files
+with gzip.open("big.log.gz", "rt") as f:
+    for line in f:                   # decompresses on the fly
+        process(line)
+
+# Combine with pickle / json — just wrap the gzip file object
+import pickle
+with gzip.open("data.pkl.gz", "wb") as f:
+    pickle.dump(obj, f)
+with gzip.open("data.pkl.gz", "rb") as f:
+    obj = pickle.load(f)
+```
+
+⚠️ For an existing file, `compress`/`decompress` load the *whole thing* into memory. Use `gzip.open` (streamed) for large files. Other stdlib codecs share the same API: `bz2` (smaller, slower), `lzma`/`xz` (smallest, slowest).
 
 ---
 

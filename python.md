@@ -255,6 +255,59 @@ Fraction(1, 3) + Fraction(1, 6)      # Fraction(1, 2)
 
 ---
 
+## Dates & time
+
+```python
+from datetime import datetime, date, time, timedelta, timezone
+
+# Getting "now"
+datetime.now()                       # ⚠️ NAIVE local time (no tz attached)
+datetime.now(timezone.utc)           # aware UTC — prefer this for anything stored/compared
+date.today()                         # just the date
+
+# ⚠️ datetime.utcnow() is deprecated (3.12) AND returns a naive value — don't use it.
+
+# Aware vs naive: a datetime with .tzinfo set is "aware", without is "naive".
+# ⚠️ You CANNOT compare or subtract a naive and an aware datetime — TypeError.
+dt.replace(tzinfo=timezone.utc)      # attach a tz to a naive dt (doesn't convert!)
+aware.astimezone(timezone.utc)       # CONVERT an aware dt to another tz
+
+# Components
+dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, dt.weekday()  # Mon=0
+
+# Comparing & differencing — operators just work on like-kinded datetimes
+dt1 < dt2                            # chronological order
+delta = dt2 - dt1                    # → timedelta
+delta.days, delta.total_seconds()    # ⚠️ .seconds is the leftover <1day part, NOT the total
+
+# timedelta — arithmetic on durations
+from datetime import timedelta
+dt + timedelta(days=7, hours=3)
+timedelta(weeks=2) > timedelta(days=10)
+
+# Parse / format
+datetime.fromisoformat("2026-05-25T14:30:00+00:00")   # ISO string → datetime
+dt.isoformat()                                         # → "2026-05-25T14:30:00+00:00"
+datetime.strptime("25/05/2026", "%d/%m/%Y")            # parse custom format
+dt.strftime("%Y-%m-%d %H:%M")                          # format custom
+# codes: %Y year %m month %d day %H hour(24) %M min %S sec %z offset %A weekday
+
+# Unix timestamps (seconds since epoch, UTC)
+dt.timestamp()                                  # aware dt → float seconds
+datetime.fromtimestamp(ts, tz=timezone.utc)     # → aware dt
+
+# ⚠️ Measuring ELAPSED time: use monotonic, NOT datetime/time.time().
+# Wall clocks can jump (NTP, DST) and go backwards. monotonic never does.
+import time
+t0 = time.monotonic()
+do_work()
+elapsed = time.monotonic() - t0      # seconds (float)
+time.perf_counter()                  # highest-resolution monotonic clock for benchmarks
+time.sleep(1.5)                      # block this thread for N seconds
+```
+
+---
+
 ## Control flow quirks
 
 ```python
@@ -1208,6 +1261,14 @@ with open("data.pkl", "wb") as f:
     pickle.dump(user, f)             # dump = write to file (no 's')
 with open("data.pkl", "rb") as f:
     user = pickle.load(f)            # load = read from file
+
+# ⚠️ Dumping straight onto the real path corrupts it if you crash mid-write.
+# Safe overwrite (any file, not just pickle): temp file → fsync → atomic rename
+import os
+with open("data.pkl.tmp", "wb") as f:
+    pickle.dump(user, f)
+    f.flush(); os.fsync(f.fileno())  # force bytes to disk, not just OS cache
+os.replace("data.pkl.tmp", "data.pkl")   # atomic on POSIX; old file intact until here
 
 # ⚠️ NEVER unpickle untrusted data — load() can run arbitrary code (RCE). Use JSON.
 # ⚠️ Not stable: tied to your Python version + class definitions. Caches, not archives.

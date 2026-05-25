@@ -1198,14 +1198,16 @@ Turns almost any object (dicts, dataclasses, nested graphs, cycles) into bytes a
 ```python
 import pickle
 
-blob = pickle.dumps(obj)             # object → bytes  (note the 's')
-obj  = pickle.loads(blob)            # bytes → object
+user = {"name": "Alex", "scores": [1, 2, 3]}   # any ordinary object
+
+blob = pickle.dumps(user)            # object → bytes  (note the 's')
+user = pickle.loads(blob)            # bytes → object
 
 # To/from disk — binary mode "wb"/"rb" (pickle is bytes, not text)
 with open("data.pkl", "wb") as f:
-    pickle.dump(obj, f)              # dump = write to file (no 's')
+    pickle.dump(user, f)             # dump = write to file (no 's')
 with open("data.pkl", "rb") as f:
-    obj = pickle.load(f)             # load = read from file
+    user = pickle.load(f)            # load = read from file
 
 # ⚠️ NEVER unpickle untrusted data — load() can run arbitrary code (RCE). Use JSON.
 # ⚠️ Not stable: tied to your Python version + class definitions. Caches, not archives.

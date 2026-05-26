@@ -991,19 +991,37 @@ threads = [threading.Thread(target=worker, args=(n, 1)) for n in "abc"]
 for t in threads: t.start()
 for t in threads: t.join()
 
-# Locks
+# Synchronization primitives — all support `with` (acquire/release) where it makes sense
+
+# Lock — mutual exclusion; one holder at a time. The default choice.
 lock = threading.Lock()
 with lock:
     shared_state += 1
+lock.acquire(timeout=5)              # non-with form; returns False if it times out
 
-# RLock — reentrant, same thread can acquire multiple times
-rlock = threading.RLock()
+# RLock — reentrant: the SAME thread can acquire it multiple times without deadlocking
+rlock = threading.RLock()            # use when a locked method calls another locked method
 
-# Event — broadcast signal between threads
+# Semaphore — allow up to N concurrent holders (e.g. cap to 10 in-flight requests)
+sem = threading.Semaphore(10)
+with sem: ...
+# BoundedSemaphore — same, but raises if released more times than acquired (catches bugs)
+
+# Event — one-shot/broadcast flag; any number of waiters wake when it's set
 ready = threading.Event()
-ready.wait()                         # block until set
-ready.set()
-ready.clear()
+ready.wait()                         # block until set (optional timeout=)
+ready.set(); ready.clear(); ready.is_set()
+
+# Condition — wait for a predicate to become true; notify waiters when state changes
+cond = threading.Condition()
+with cond:
+    cond.wait_for(lambda: queue_has_items)   # releases lock while waiting, reacquires on wake
+with cond:
+    cond.notify()                            # or notify_all() — wake waiter(s)
+
+# Barrier — N threads block until all N have arrived, then all proceed together
+barrier = threading.Barrier(3)
+barrier.wait()                       # returns once the 3rd thread arrives
 
 # Daemon — dies with main program (won't keep process alive)
 t = threading.Thread(target=worker, daemon=True)

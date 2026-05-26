@@ -4,7 +4,7 @@
 
 ---
 
-## Lists
+## Lists ([⏱](#time-complexity-big-o-of-common-ops))
 
 Python lists are dynamic arrays (think `Vec<T>` / `ArrayList`), not linked lists.
 
@@ -84,7 +84,7 @@ a, _, c = t            # _ is the throwaway convention
 
 ---
 
-## Dictionaries
+## Dictionaries ([⏱](#time-complexity-big-o-of-common-ops))
 
 Ordered (insertion order, guaranteed since 3.7). Hash map under the hood.
 
@@ -124,7 +124,7 @@ for k, v in d.items(): ...
 
 ---
 
-## Sets
+## Sets ([⏱](#time-complexity-big-o-of-common-ops))
 
 ```python
 s = {1, 2, 3}
@@ -193,7 +193,7 @@ p2 = replace(p, x=10)        # new Point with x=10, other fields unchanged
 
 ---
 
-## Strings
+## Strings ([⏱](#time-complexity-big-o-of-common-ops))
 
 ```python
 name, n = "Alex", 3
@@ -684,7 +684,7 @@ Path.home(), Path.cwd()
 
 ---
 
-## collections module
+## collections module ([⏱](#time-complexity-big-o-of-common-ops) — deque)
 
 ```python
 from collections import defaultdict, Counter, deque, namedtuple, ChainMap
@@ -750,7 +750,7 @@ cfg = ChainMap(overrides, defaults)
 
 ---
 
-## heapq (priority queue)
+## heapq (priority queue) ([⏱](#time-complexity-big-o-of-common-ops))
 
 It's a **min-heap on a regular list**. There's no separate Heap class — `heapq` is a set of functions that operate on lists.
 
@@ -763,6 +763,10 @@ heapq.heappush(h, 1)
 heapq.heappush(h, 2)
 heapq.heappop(h)                     # 1 — always returns SMALLEST
 h[0]                                 # peek at smallest without popping
+
+# ⚠️ A heap is NOT a sorted list. Only h[0] (the min) is meaningful — h[1], h[2]…
+# are in NO guaranteed order. You can't binary-search it or index "the 2nd smallest".
+# Need a fully-ordered list with random access / search? That's bisect, not heapq.
 
 # Heapify an existing list in place — O(n)
 nums = [5, 1, 3, 8, 2]
@@ -791,6 +795,43 @@ heapq.heappop(pq)                    # (1, "task B")
 import itertools
 counter = itertools.count()
 heapq.heappush(pq, (priority, next(counter), item))
+```
+
+---
+
+## bisect (binary search on a sorted list)
+
+Like `heapq`, it's functions over a plain list — but the list must be **fully sorted**, and it's for *searching*, not for repeatedly popping the min (that's `heapq`). ([complexity table ↓](#time-complexity-big-o-of-common-ops))
+
+```python
+import bisect
+
+a = [1, 3, 4, 4, 7]                  # ⚠️ MUST be sorted ascending
+
+# Insertion point — where x WOULD go to keep a sorted. The two variants differ on TIES:
+bisect.bisect_left(a, 4)             # 2 — leftmost spot (before existing 4s)
+bisect.bisect_right(a, 4)            # 4 — rightmost spot (after existing 4s); alias: bisect()
+
+# Insert while staying sorted — ⚠️ search is O(log n) but the shift makes it O(n) overall
+bisect.insort(a, 5)                  # a → [1, 3, 4, 4, 5, 7]
+
+# Binary search "does x exist": bisect_left, then check the slot
+i = bisect.bisect_left(a, 4)
+found = i < len(a) and a[i] == 4
+
+# Count occurrences of x in O(log n)
+bisect.bisect_right(a, 4) - bisect.bisect_left(a, 4)   # 2
+
+# Range query: how many elements in [lo, hi)
+bisect.bisect_left(a, hi) - bisect.bisect_left(a, lo)
+
+# Classic: map a value into a bucket (grades, tiers)
+grades = "FDCBA"
+breaks = [60, 70, 80, 90]
+grades[bisect.bisect(breaks, score)]      # score=85 → "B"
+
+# key= (3.10+) — search by a computed field, no separate key-list needed
+bisect.bisect_left(rows, target_id, key=lambda r: r.id)
 ```
 
 ---

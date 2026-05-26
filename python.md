@@ -29,6 +29,8 @@ lst[-1]               # last element
 lst[-2]               # second to last
 lst[2:5]              # elements 2, 3, 4
 lst[:3]               # first 3
+lst[-3:]              # last 3        — ⚠️ negative start, empty stop (NOT lst[:-3])
+lst[:-3]              # all BUT the last 3
 lst[3:]               # from index 3 to end
 lst[::2]              # every other element
 lst[::-1]             # reversed (new list)
@@ -790,6 +792,59 @@ import itertools
 counter = itertools.count()
 heapq.heappush(pq, (priority, next(counter), item))
 ```
+
+---
+
+## Time complexity (Big-O of common ops)
+
+CPython, average case. The ones interviewers probe are flagged ⚠️.
+
+### list (dynamic array)
+
+| Operation | Cost | |
+|---|---|---|
+| `lst[i]` get/set | **O(1)** | direct index |
+| `append(x)` / `pop()` | **O(1)** | amortized; at the END |
+| `insert(0, x)` / `pop(0)` | **O(n)** ⚠️ | shifts everything — use `deque` for a queue |
+| `insert(i, x)` / `del lst[i]` | **O(n)** | shift after `i` |
+| `x in lst` | **O(n)** ⚠️ | linear scan — use a `set` for membership |
+| `.index(x)` / `.count(x)` / `min` / `max` / `sum` | **O(n)** | full scan |
+| `lst[a:b]` slice | **O(b−a)** | copies the range |
+| `.sort()` | **O(n log n)** | |
+| `len(lst)` | **O(1)** | stored, not counted |
+
+### deque — O(1) at BOTH ends (that's the point)
+
+| Operation | Cost | |
+|---|---|---|
+| `append` / `appendleft` / `pop` / `popleft` | **O(1)** | vs list's O(n) on the left |
+| `d[i]` access in the middle | **O(n)** ⚠️ | not an array — no random access |
+
+### dict / set — hashing
+
+| Operation | Cost | |
+|---|---|---|
+| get / set / del by key, `x in d`, `s.add` | **O(1)** | average; O(n) worst case (pathological hashes) |
+| iterate | **O(n)** | |
+| `a & b` set intersection | **O(min(len))** | |
+| `a \| b` union / `a - b` difference | **O(len)** | |
+
+### heapq — binary heap on a list
+
+| Operation | Cost | |
+|---|---|---|
+| `heappush` / `heappop` | **O(log n)** | |
+| `h[0]` peek smallest | **O(1)** | |
+| `heapify(lst)` | **O(n)** ⚠️ | NOT O(n log n) — build is linear |
+| `nlargest(k)` / `nsmallest(k)` | **O(n log k)** | beats sort-then-slice for small k |
+
+### str
+
+| Operation | Cost | |
+|---|---|---|
+| `s[i]`, `len(s)` | **O(1)** | |
+| `+=` in a loop | **O(n²)** ⚠️ | strings are immutable — use `"".join(parts)` → O(n) |
+| `x in s` substring | **O(n·m)** | worst case |
 
 ---
 

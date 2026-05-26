@@ -1,10 +1,27 @@
-# Alex's Python Cheat Sheet
+# Alex's Python Reference
 
-> The quirky Pythonic syntax for things you already know how to do in C++, Haskell, or TypeScript.
+> A terse, code-first reference for the quirky Pythonic syntax of things you already know how to do in C++, Haskell, or TypeScript.
 
 ---
 
-## Lists ([⏱](#list))
+## Contents
+
+**Types & data structures** — [Lists](#lists) · [Tuples](#tuples) · [Dictionaries](#dictionaries) · [Sets](#sets) · [Strings](#strings) · [Bytes & buffers](#bytes--binary-buffers) · [Numbers](#numbers) · [Dates & time](#dates--time) · [Copying / cloning](#copying--cloning) · [Time complexity (Big-O)](#time-complexity-big-o-of-common-ops)
+
+**Language** — [Control flow](#control-flow-quirks) · [Functions](#functions) · [Comprehensions](#comprehensions) · [Iteration helpers](#iteration-helpers) · [Generators](#generators-yield) · [Enums](#enums) · [Classes](#classes) · [Dataclasses](#dataclasses) · [Exceptions](#exception-handling) · [Context managers](#context-managers-with) · [Type hints](#type-hints) · [Dependency injection](#dependency-injection-constructor-injection) · [Imports](#imports)
+
+**Standard library** — [Pathlib](#pathlib-use-this-not-ospath) · [collections](#collections-module) · [heapq](#heapq-priority-queue) · [bisect](#bisect-binary-search-on-a-sorted-list) · [itertools](#itertools-highlights) · [functools](#functools-highlights)
+
+**Concurrency** — [threading](#concurrency-threading) · [thread/process pools](#concurrency-threadprocess-pools) · [asyncio](#concurrency-asyncio)
+
+**I/O & serialization** — [Streaming I/O](#streaming-io-files--sockets) · [JSON](#json) · [Pickling](#pickling-serialize-python-objects-to-disk) · [Gzip](#gzip-compression)
+
+**Other** — [Misc Pythonisms](#misc-pythonisms-alex-keeps-forgetting)
+
+---
+
+## Lists
+([⏱ complexity](#list))
 
 Python lists are dynamic arrays (think `Vec<T>` / `ArrayList`), not linked lists.
 
@@ -84,7 +101,8 @@ a, _, c = t            # _ is the throwaway convention
 
 ---
 
-## Dictionaries ([⏱](#dict-and-set))
+## Dictionaries
+([⏱ complexity](#dict-and-set))
 
 Ordered (insertion order, guaranteed since 3.7). Hash map under the hood.
 
@@ -124,7 +142,8 @@ for k, v in d.items(): ...
 
 ---
 
-## Sets ([⏱](#dict-and-set))
+## Sets
+([⏱ complexity](#dict-and-set))
 
 ```python
 s = {1, 2, 3}
@@ -193,7 +212,8 @@ p2 = replace(p, x=10)        # new Point with x=10, other fields unchanged
 
 ---
 
-## Strings ([⏱](#str))
+## Strings
+([⏱ complexity](#str))
 
 ```python
 name, n = "Alex", 3
@@ -802,7 +822,8 @@ Path.home(), Path.cwd()
 
 ---
 
-## collections module ([⏱](#deque) — deque)
+## collections module
+([⏱ complexity: deque](#deque))
 
 ```python
 from collections import defaultdict, Counter, deque, namedtuple, ChainMap
@@ -870,7 +891,8 @@ cfg = ChainMap(overrides, defaults)
 
 ---
 
-## heapq (priority queue) ([⏱](#heapq))
+## heapq (priority queue)
+([⏱ complexity](#heapq))
 
 It's a **min-heap on a regular list**. There's no separate Heap class — `heapq` is a set of functions that operate on lists.
 

@@ -1235,7 +1235,14 @@ def consumer(q):
 t = threading.Thread(target=worker, daemon=True)
 
 # ⚠️ Threads CANNOT be cancelled from outside. threading.Thread has no .cancel().
-# Workers must check a shared flag periodically (use the Event pattern above).
+# Cooperative stop: share an Event; the worker polls it and exits on its own.
+stop = threading.Event()
+def worker():
+    while not stop.is_set():         # check the flag each iteration
+        do_a_chunk_of_work()
+        stop.wait(1.0)               # nicer than time.sleep — wakes early when set
+# main thread, to stop it:
+stop.set(); t.join()                 # signal, then wait for the worker to finish
 # (There's a ctypes hack to inject an exception — don't.)
 
 # ⚠️ GIL: Python threads do NOT parallelize CPU-bound work.

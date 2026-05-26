@@ -1222,6 +1222,15 @@ q.task_done()                        # mark the just-gotten item as processed
 q.join()                             # block until every put item has been task_done'd
 # variants: queue.LifoQueue (stack), queue.PriorityQueue (min-heap of (priority, item))
 
+# Stopping consumers: send a SENTINEL ("poison pill") — a unique marker meaning "no more work".
+# Each consumer that sees it puts it back (for the others) and exits. One per worker also works.
+STOP = object()                      # unique sentinel; `is` comparison, never collides with data
+def consumer(q):
+    while (item := q.get()) is not STOP:
+        process(item)
+    q.put(STOP)                      # re-queue so sibling consumers also see it, then return
+# producer: after all real items, put STOP once per consumer (or once + re-queue as above)
+
 # Daemon — dies with main program (won't keep process alive)
 t = threading.Thread(target=worker, daemon=True)
 
@@ -1446,6 +1455,14 @@ async def consumer(q):
             await process(item)
         finally:
             q.task_done()
+
+# Stopping: same SENTINEL ("poison pill") idea as queue.Queue (see threading).
+# Alternative for asyncio: await q.join() to drain, then just .cancel() the consumer tasks.
+STOP = object()
+async def consumer(q):
+    while (item := await q.get()) is not STOP:
+        await process(item)
+    await q.put(STOP)                # pass it on to sibling consumers
 ```
 
 ### Mixing with sync/blocking code

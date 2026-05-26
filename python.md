@@ -877,13 +877,12 @@ od.popitem(last=False)               # first (FIFO) — plain dict can't do this
 OrderedDict([("a",1),("b",2)]) == OrderedDict([("b",2),("a",1)])   # False
 {"a":1, "b":2} == {"b":2, "a":1}                                    # True
 
-# Classic use: simple LRU cache
-cache = OrderedDict()
-def get(key):
-    if key in cache:
-        cache.move_to_end(key)       # mark as recently used
-        return cache[key]
-    ...
+# move_to_end use case: track recency — touch a key to push it to the end,
+# so the oldest entry is always at the front (popitem(last=False) evicts it)
+touched = OrderedDict()
+touched["a"] = 1
+touched.move_to_end("a")             # "a" is now the most-recently-touched
+oldest = next(iter(touched))         # front = least-recently-touched
 
 # ChainMap — search multiple dicts in order (good for configs/scopes)
 cfg = ChainMap(overrides, defaults)

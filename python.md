@@ -580,6 +580,80 @@ class Status(StrEnum):
 
 ---
 
+## Classes
+
+```python
+class Dog:
+    species = "Canis familiaris"     # CLASS variable — shared by ALL instances
+
+    def __init__(self, name, age):   # constructor; self = the instance being built
+        self.name = name             # INSTANCE variables — unique per object
+        self.age = age
+
+    def bark(self):                  # instance method — self is passed automatically
+        return f"{self.name} says woof"
+
+d = Dog("Rex", 3)                    # calls __init__ (you never call it directly)
+d.bark()                             # → "Rex says woof"  (d passed as self)
+d.name                               # "Rex"
+Dog.species                          # access class var via the class
+
+# ⚠️ Mutable CLASS variable is shared across instances — classic trap
+class Bad:
+    tricks = []                      # ONE list for the whole class
+    def add(self, t): self.tricks.append(t)
+# fix: assign mutable state to self in __init__ instead (self.tricks = [])
+
+# Method types
+class C:
+    def instance_method(self): ...       # operates on the instance (self)
+
+    @classmethod
+    def from_string(cls, s):             # gets the CLASS (cls), not an instance
+        return cls(...)                  # common for "alternative constructors"
+
+    @staticmethod
+    def helper(x):                       # no self/cls — just a function namespaced on C
+        return x * 2
+
+# @property — computed attribute that LOOKS like a plain field (no parens to call)
+class Circle:
+    def __init__(self, r): self.r = r
+    @property
+    def area(self):                      # access as c.area, not c.area()
+        return 3.14159 * self.r ** 2
+    @area.setter                         # optional — makes c.area = ... work
+    def area(self, value): ...
+
+# __repr__ / __str__ — control how the object prints
+class Point:
+    def __init__(self, x, y): self.x, self.y = x, y
+    def __repr__(self):                  # for devs/debug; aim to be unambiguous
+        return f"Point({self.x}, {self.y})"
+    def __str__(self):                   # for users/print(); falls back to __repr__
+
+# Naming conventions (Python has no real "private" — enforced by convention)
+self._internal                          # single _ : "internal, don't touch" (just a hint)
+self.__mangled                          # double _ : name-mangled to _Class__mangled
+                                        #            (avoids subclass clashes, NOT security)
+
+# Inheritance + super()
+class Animal:
+    def __init__(self, name): self.name = name
+    def speak(self): return "..."
+
+class Cat(Animal):
+    def __init__(self, name, indoor):
+        super().__init__(name)           # call parent __init__ — don't skip this
+        self.indoor = indoor
+    def speak(self): return "meow"       # override
+
+isinstance(c, Animal)                    # True — Cat IS-A Animal
+issubclass(Cat, Animal)                  # True
+```
+
+---
+
 ## Dataclasses
 
 ```python

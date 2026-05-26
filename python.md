@@ -832,9 +832,11 @@ heapq.heappush(h, -x)
 biggest = -heapq.heappop(h)
 
 # Priority queue with tuples: (priority, item)
+# Tuples compare LEXICOGRAPHICALLY — item by item, left to right: (1, "z") < (2, "a")
+# because 1 < 2 (the rest is never even looked at). That's WHY priority goes FIRST.
 heapq.heappush(pq, (3, "task A"))
 heapq.heappush(pq, (1, "task B"))
-heapq.heappop(pq)                    # (1, "task B")
+heapq.heappop(pq)                    # (1, "task B") — smallest first element wins
 
 # ⚠️ If priorities can tie AND items aren't comparable (e.g. dicts, custom objects),
 # add a tiebreaker counter so Python never tries to compare the items themselves:

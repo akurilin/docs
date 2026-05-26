@@ -4,7 +4,7 @@
 
 ---
 
-## Lists ([⏱](#time-complexity-big-o-of-common-ops))
+## Lists ([⏱](#list))
 
 Python lists are dynamic arrays (think `Vec<T>` / `ArrayList`), not linked lists.
 
@@ -84,7 +84,7 @@ a, _, c = t            # _ is the throwaway convention
 
 ---
 
-## Dictionaries ([⏱](#time-complexity-big-o-of-common-ops))
+## Dictionaries ([⏱](#dict-and-set))
 
 Ordered (insertion order, guaranteed since 3.7). Hash map under the hood.
 
@@ -124,7 +124,7 @@ for k, v in d.items(): ...
 
 ---
 
-## Sets ([⏱](#time-complexity-big-o-of-common-ops))
+## Sets ([⏱](#dict-and-set))
 
 ```python
 s = {1, 2, 3}
@@ -193,7 +193,7 @@ p2 = replace(p, x=10)        # new Point with x=10, other fields unchanged
 
 ---
 
-## Strings ([⏱](#time-complexity-big-o-of-common-ops))
+## Strings ([⏱](#str))
 
 ```python
 name, n = "Alex", 3
@@ -684,7 +684,7 @@ Path.home(), Path.cwd()
 
 ---
 
-## collections module ([⏱](#time-complexity-big-o-of-common-ops) — deque)
+## collections module ([⏱](#deque) — deque)
 
 ```python
 from collections import defaultdict, Counter, deque, namedtuple, ChainMap
@@ -750,7 +750,7 @@ cfg = ChainMap(overrides, defaults)
 
 ---
 
-## heapq (priority queue) ([⏱](#time-complexity-big-o-of-common-ops))
+## heapq (priority queue) ([⏱](#heapq))
 
 It's a **min-heap on a regular list**. There's no separate Heap class — `heapq` is a set of functions that operate on lists.
 
@@ -840,7 +840,8 @@ bisect.bisect_left(rows, target_id, key=lambda r: r.id)
 
 CPython, average case. The ones interviewers probe are flagged ⚠️.
 
-### list (dynamic array)
+### list
+Dynamic array.
 
 | Operation | Cost | |
 |---|---|---|
@@ -854,14 +855,16 @@ CPython, average case. The ones interviewers probe are flagged ⚠️.
 | `.sort()` | **O(n log n)** | |
 | `len(lst)` | **O(1)** | stored, not counted |
 
-### deque — O(1) at BOTH ends (that's the point)
+### deque
+O(1) at BOTH ends — that's the point.
 
 | Operation | Cost | |
 |---|---|---|
 | `append` / `appendleft` / `pop` / `popleft` | **O(1)** | vs list's O(n) on the left |
 | `d[i]` access in the middle | **O(n)** ⚠️ | not an array — no random access |
 
-### dict / set — hashing
+### dict and set
+Hash-based.
 
 | Operation | Cost | |
 |---|---|---|
@@ -870,7 +873,8 @@ CPython, average case. The ones interviewers probe are flagged ⚠️.
 | `a & b` set intersection | **O(min(len))** | |
 | `a \| b` union / `a - b` difference | **O(len)** | |
 
-### heapq — binary heap on a list
+### heapq
+Binary heap on a list.
 
 | Operation | Cost | |
 |---|---|---|

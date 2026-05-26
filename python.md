@@ -216,9 +216,53 @@ s.startswith(("a", "b"))             # tuple → any of these
 "abc" in s                           # substring check
 
 r"raw\nstring"                       # backslash-literal; no escapes
-b"bytes"                             # bytes literal (different type!)
+b"bytes"                             # bytes literal — different type! (see Bytes & buffers)
 """triple
 quoted"""                            # multiline, keeps newlines
+```
+
+---
+
+## Bytes & binary buffers
+
+`bytes` is to binary what `str` is to text — and they DON'T mix (no implicit conversion).
+
+```python
+# bytes — IMMUTABLE sequence of ints 0–255
+b = b"hi"                            # literal
+bytes([104, 105])                    # from ints → b"hi"
+b[0]                                 # ⚠️ an INT (104), NOT b"h"
+b[0:1]                               # but a SLICE is bytes → b"h"
+b.hex(), bytes.fromhex("6869")       # to/from hex string
+
+# str <-> bytes — always an EXPLICIT encoding (utf-8 by default)
+"café".encode()                      # str → bytes → b"caf\xc3\xa9"
+b"caf\xc3\xa9".decode()              # bytes → str → "café"
+# ⚠️ "abc" == b"abc" is False, and you can't concatenate str + bytes
+
+# bytearray — MUTABLE bytes; build/patch buffers in place (used in the socket examples)
+ba = bytearray(b"abc")
+ba[0] = 65                           # in-place edit → bytearray(b"Abc")
+ba.append(33); ba.extend(b"!!")      # grow like a list of bytes
+bytes(ba)                            # freeze back to immutable bytes
+
+# memoryview — zero-copy WINDOW into a bytes-like buffer; slice without copying
+mv = memoryview(big_buffer)
+chunk = mv[1024:2048]                # no copy — just a view (cheap on huge data)
+mv[0:2] = b"\x00\x00"                # writes THROUGH to the underlying bytearray
+
+# io.BytesIO — in-memory binary file object (file-like, but no disk)
+import io
+buf = io.BytesIO()
+buf.write(b"data")                   # pass anywhere a file handle is expected
+buf.getvalue()                       # → all bytes written so far
+buf.seek(0); buf.read()              # rewind + read like a real file
+# io.StringIO is the TEXT analog (in-memory text file)
+
+# Common use: serialize to memory instead of disk
+import pickle
+buf = io.BytesIO()
+pickle.dump(obj, buf)                # the "file" is really RAM
 ```
 
 ---
@@ -712,6 +756,8 @@ c1 - c2                              # subtract, clamped at 0
 c1 & c2                              # min, c1 | c2  → max
 
 # deque — O(1) at BOTH ends (lists are O(n) at the left)
+# ⚠️ A fast CONTAINER, not a thread channel. To pass work between threads with
+#    blocking/backpressure, use queue.Queue (see Concurrency: threading), not deque.
 d = deque([1, 2, 3])
 d.append(4); d.appendleft(0)
 d.pop(); d.popleft()
@@ -1067,6 +1113,17 @@ with cond:
 # Barrier — N threads block until all N have arrived, then all proceed together
 barrier = threading.Barrier(3)
 barrier.wait()                       # returns once the 3rd thread arrives
+
+# queue.Queue — thread-safe producer/consumer channel (NOT the same as collections.deque,
+# which is just a fast container with no blocking/backpressure). This is how threads hand
+# work to each other. (asyncio.Queue is the async-task analog — see asyncio section.)
+import queue
+q = queue.Queue(maxsize=100)         # 0 = unbounded; maxsize gives backpressure
+q.put(item)                          # blocks if full (timeout= optional)
+item = q.get()                       # blocks until an item is available
+q.task_done()                        # mark the just-gotten item as processed
+q.join()                             # block until every put item has been task_done'd
+# variants: queue.LifoQueue (stack), queue.PriorityQueue (min-heap of (priority, item))
 
 # Daemon — dies with main program (won't keep process alive)
 t = threading.Thread(target=worker, daemon=True)

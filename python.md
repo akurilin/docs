@@ -940,6 +940,16 @@ counter = itertools.count()
 heapq.heappush(pq, (priority, next(counter), item))
 ```
 
+**Three priority queues — same heap underneath, pick by context:**
+
+| Tool | Best for | Gives you |
+|---|---|---|
+| `heapq` | local, single-threaded algorithms | raw functions on a list — efficient priority ordering, no locking |
+| `queue.PriorityQueue` | threaded workers | heap + locks + **blocking** `get`/`put` + `join` |
+| `asyncio.PriorityQueue` | async tasks | heap + **awaitable** `get`/`put` + `join` |
+
+All three order by `(priority, item)` tuples — same lexicographic-comparison + tiebreaker caveats as above.
+
 ---
 
 ## bisect (binary search on a sorted list)

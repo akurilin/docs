@@ -933,11 +933,12 @@ heapq.heappush(pq, (3, "task A"))
 heapq.heappush(pq, (1, "task B"))
 heapq.heappop(pq)                    # (1, "task B") — smallest first element wins
 
-# ⚠️ If priorities can tie AND items aren't comparable (e.g. dicts, custom objects),
-# add a tiebreaker counter so Python never tries to compare the items themselves:
+# ⚠️ BEST PRACTICE for ties: either keep priorities unique, OR add a counter tiebreaker.
+# On a tie, tuple compare falls through to the item — crashes if items aren't comparable.
+# Counter also gives FIFO order among equal priorities (a nice bonus).
 import itertools
 counter = itertools.count()
-heapq.heappush(pq, (priority, next(counter), item))
+heapq.heappush(pq, (priority, next(counter), item))   # (priority, tiebreaker, item)
 ```
 
 **Three priority queues — same heap underneath, pick by context:**
@@ -1210,12 +1211,18 @@ ready = threading.Event()
 ready.wait()                         # block until set (optional timeout=)
 ready.set(); ready.clear(); ready.is_set()
 
-# Condition — wait for a predicate to become true; notify waiters when state changes
-cond = threading.Condition()
-with cond:
+# Condition — use when the question is "is this ARBITRARY PREDICATE over shared mutable
+# state true right now?" (vs Event = one-shot boolean "did X happen?"). Waiter re-checks
+# the predicate on each wake; whoever mutates the state calls notify() to prompt a re-check.
+# ⚠️ A Condition IS a lock — every thread touching that state must use THIS same lock (via
+#    `with cond:`), never a separate Lock alongside it, or there's no mutual exclusion.
+cond = threading.Condition()              # creates its own internal lock
+cond = threading.Condition(existing_lock) # OR wrap a lock you already have: adds wait/notify
+                                          # to it without introducing a second lock
+with cond:                                # acquires the lock (same one `with existing_lock` takes)
     cond.wait_for(lambda: queue_has_items)   # releases lock while waiting, reacquires on wake
-with cond:
-    cond.notify()                            # or notify_all() — wake waiter(s)
+with cond:                                # mutator side MUST also hold the lock
+    queue.append(x); cond.notify()           # notify()/notify_all() — wake waiter(s) to re-check
 
 # Barrier — N threads block until all N have arrived, then all proceed together
 barrier = threading.Barrier(3)

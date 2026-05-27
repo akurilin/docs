@@ -10,7 +10,7 @@
 
 **Language** — [Control flow](#control-flow-quirks) · [Functions](#functions) · [Comprehensions](#comprehensions) · [Iteration helpers](#iteration-helpers) · [Generators](#generators-yield) · [Enums](#enums) · [Classes](#classes) · [Dataclasses](#dataclasses) · [Exceptions](#exception-handling) · [Context managers](#context-managers-with) · [Type hints](#type-hints) · [Dependency injection](#dependency-injection-constructor-injection) · [Imports](#imports)
 
-**Standard library** — [Pathlib](#pathlib-use-this-not-ospath) · [collections](#collections-module) · [heapq](#heapq-priority-queue) · [bisect](#bisect-binary-search-on-a-sorted-list) · [itertools](#itertools-highlights) · [functools](#functools-highlights)
+**Standard library** — [Pathlib](#pathlib-use-this-not-ospath) · [collections](#collections-module) · [heapq](#heapq-priority-queue) · [bisect](#bisect-binary-search-on-a-sorted-list) · [itertools](#itertools-highlights) · [functools](#functools-highlights) · [Regex](#regex-re)
 
 **Concurrency** — [threading](#concurrency-threading) · [thread/process pools](#concurrency-threadprocess-pools) · [asyncio](#concurrency-asyncio)
 
@@ -1094,6 +1094,66 @@ def slow(x): ...
 @wraps(original)                         # preserve name/doc in decorators
 def wrapper(*args, **kwargs): ...
 ```
+
+---
+
+## Regex (re)
+
+For fixed substrings, plain `str` methods (`.replace`, `.split`, `in`) are faster and clearer — reach for `re` only when you actually need *patterns*.
+
+```python
+import re
+
+# Compile once, reuse — or use the module-level fns (they compile + cache internally,
+# so re.search(pat, s) is fine for one-offs; compile for hot loops / readability).
+pat = re.compile(r"\d+")             # ⚠️ ALWAYS raw strings — otherwise \d \w \b are escapes
+
+# search vs match vs fullmatch — the classic gotcha
+re.search(r"\d+", "abc123")          # finds ANYWHERE → match for "123"
+re.match(r"\d+", "abc123")           # ⚠️ anchors at START only → None here
+re.fullmatch(r"\d+", "123")          # whole string must match → ok; "12a" → None
+# match/fullmatch anchor for you — no need for a leading ^
+
+# Match objects are truthy on success, None on failure — CHECK before using
+m = re.search(r"(\d+)-(\d+)", "12-34")
+if m:                                # ⚠️ None is falsy; never .group() without checking
+    m.group(0)                       # "12-34" — the WHOLE match
+    m.group(1), m.group(2)           # "12", "34" — captured groups (1-indexed!)
+    m.groups()                       # ("12", "34") — all groups as a tuple
+    m.start(), m.end(), m.span()     # positions in the original string
+
+# Named groups — (?P<name>...)
+m = re.search(r"(?P<y>\d{4})-(?P<mo>\d{2})", "2026-05")
+m.group("y"), m.group("mo")          # "2026", "05"
+m.groupdict()                        # {"y": "2026", "mo": "05"}
+
+# Find all matches
+re.findall(r"\d+", "a1b22c333")      # ['1', '22', '333'] — list of STRINGS
+re.findall(r"(\w)(\d)", "a1b2")      # [('a','1'), ('b','2')] — ⚠️ list of TUPLES when >1 group
+re.finditer(r"\d+", "a1b22")         # iterator of Match objects — use when you want .span() etc.
+
+# Substitute
+re.sub(r"\s+", " ", messy)           # collapse whitespace runs → single space
+re.sub(r"(\d+)", r"[\1]", "x42")     # \1 = backref to group 1 in replacement → "x[42]"
+re.sub(r"\d+", lambda m: str(int(m.group()) * 2), "a3")  # replacement can be a FUNCTION → "a6"
+re.subn(r"\d", "#", "a1b2")          # like sub but returns (new_string, num_replacements)
+
+# Split — delimiters dropped; a CAPTURE group in the pattern keeps them in the result
+re.split(r"[,;]\s*", "a, b;c")       # ['a', 'b', 'c']
+
+# Flags (pass as last arg; combine with |):
+#   re.IGNORECASE / re.I   case-insensitive
+#   re.MULTILINE  / re.M   ^ and $ match at every line, not just string start/end
+#   re.DOTALL     / re.S   . also matches newline (normally it does NOT)
+#   re.VERBOSE    / re.X   ignore whitespace + allow # comments in the pattern
+re.search(r"abc", s, re.I | re.M)
+
+# Token cheat: \d digit  \w word char  \s whitespace  \b word boundary  . any (not \n)
+#   quantifiers * + ? {m,n}   [...] char class   (?:...) non-capturing group
+#   greedy by default; add ? for LAZY (fewest): \d+? vs \d+
+```
+
+⚠️ Nested quantifiers on overlapping patterns (e.g. `(a+)+$`) can cause **catastrophic backtracking** — exponential time on a non-matching input. Keep patterns specific; this is a real DoS vector on user input.
 
 ---
 

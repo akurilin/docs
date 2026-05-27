@@ -31,8 +31,8 @@ lst.append(4)         # NOT push — adds one element at end
 lst.extend([5, 6])    # append ALL elements of an iterable
 lst += [7, 8]         # equivalent to extend
 lst.insert(0, 0)      # insert at index (shifts the rest)
-lst.pop()             # remove + return last
-lst.pop(0)            # remove + return at index
+lst.pop()             # remove + return last (IndexError if list is empty)
+lst.pop(0)            # remove + return at index (IndexError if out of range)
 lst.remove(3)         # remove FIRST occurrence by value (ValueError if missing)
 lst.clear()           # empty in place
 ```
@@ -54,6 +54,9 @@ lst[::-1]             # reversed (new list)
 lst[:]                # shallow copy
 lst[1:4] = [10, 20]   # slice assignment — replaces that range (can shrink/grow)
 del lst[1:4]          # delete a range
+
+lst[99]               # ⚠️ IndexError if out of range — but a SLICE never raises:
+lst[99:200]           # → [] (out-of-range slice bounds are silently clamped)
 ```
 
 ### Sorting & reversing
@@ -94,7 +97,7 @@ t = 1, 2, 3            # parens optional
 single = (1,)          # trailing comma REQUIRED — (1) is just int 1
 empty = ()
 
-a, b, c = t            # unpack
+a, b, c = t            # unpack — ⚠️ ValueError unless t has EXACTLY 3 elements
 a, *rest = t           # rest = [2, 3]  (always a list, even from a tuple)
 a, _, c = t            # _ is the throwaway convention
 ```
@@ -120,7 +123,7 @@ d.setdefault("a", 0)  # set + return if missing, else return existing
 # Removal
 d.pop("a")            # KeyError if missing
 d.pop("a", None)      # default if missing
-d.popitem()           # remove + return last (key, value) pair
+d.popitem()           # remove + return last (key, value) pair (KeyError if empty)
 
 # Membership / merging
 "a" in d              # checks KEYS
@@ -154,7 +157,7 @@ s.update([4, 5, 6])   # add many
 
 s.remove(1)           # KeyError if missing
 s.discard(1)          # no error if missing
-s.pop()               # remove arbitrary element
+s.pop()               # remove arbitrary element (KeyError if empty)
 
 # Set algebra
 a | b                 # union
@@ -257,7 +260,7 @@ b.hex(), bytes.fromhex("6869")       # to/from hex string
 
 # str <-> bytes — always an EXPLICIT encoding (utf-8 by default)
 "café".encode()                      # str → bytes → b"caf\xc3\xa9"
-b"caf\xc3\xa9".decode()              # bytes → str → "café"
+b"caf\xc3\xa9".decode()              # bytes → str → "café"  (⚠️ UnicodeDecodeError on invalid bytes; .decode(errors="replace") to be lenient)
 # ⚠️ "abc" == b"abc" is False, and you can't concatenate str + bytes
 
 # bytearray — MUTABLE bytes; build/patch buffers in place (used in the socket examples)
@@ -296,13 +299,14 @@ pickle.dump(obj, buf)                # the "file" is really RAM
 1 ^ 2          # XOR (bitwise) — ^ is NOT power in Python
 10 % 3         # modulo
 divmod(10, 3)  # (3, 1) — quotient and remainder together
+1 / 0          # ⚠️ ZeroDivisionError — also //, %, divmod; even 1.0/0.0 raises (no inf, unlike C)
 
 # int has arbitrary precision — no overflow
 10 ** 100      # works fine
 
 # Conversion
-int("42"), float("3.14"), str(42)
-int("ff", 16), int("1010", 2)        # bases
+int("42"), float("3.14"), str(42)    # ⚠️ ValueError if the string isn't a valid number
+int("ff", 16), int("1010", 2)        # bases (⚠️ ValueError if digits don't fit the base)
 hex(255), bin(10), oct(8)            # → "0xff", "0b1010", "0o10"
 
 # Math
@@ -352,9 +356,9 @@ dt + timedelta(days=7, hours=3)
 timedelta(weeks=2) > timedelta(days=10)
 
 # Parse / format
-datetime.fromisoformat("2026-05-25T14:30:00+00:00")   # ISO string → datetime
+datetime.fromisoformat("2026-05-25T14:30:00+00:00")   # ISO string → datetime  (⚠️ ValueError if malformed)
 dt.isoformat()                                         # → "2026-05-25T14:30:00+00:00"
-datetime.strptime("25/05/2026", "%d/%m/%Y")            # parse custom format
+datetime.strptime("25/05/2026", "%d/%m/%Y")            # parse custom format (⚠️ ValueError if it doesn't match)
 dt.strftime("%Y-%m-%d %H:%M")                          # format custom
 # codes: %Y year %m month %d day %H hour(24) %M min %S sec %z offset %A weekday
 
@@ -518,6 +522,7 @@ def count_up_to(n):
 g = count_up_to(3)          # ⚠️ NOTHING has run yet — just returns a generator object
 next(g)                     # 0   — runs until first yield
 next(g)                     # 1
+next(g, "done")             # ⚠️ bare next() raises StopIteration once exhausted; pass a default to get it back instead
 list(count_up_to(3))        # [0, 1, 2]
 for x in count_up_to(3):    # the usual way to consume
     process(x)
@@ -797,7 +802,7 @@ from pathlib import Path
 
 p = Path("data") / "file.txt"        # / operator builds paths
 p.exists(), p.is_file(), p.is_dir()
-p.read_text(), p.write_text("...")
+p.read_text(), p.write_text("...")   # ⚠️ read_* → FileNotFoundError if the path is missing
 p.read_bytes(), p.write_bytes(b"...")
 
 p.name           # "file.txt"
@@ -902,7 +907,7 @@ h = []
 heapq.heappush(h, 3)
 heapq.heappush(h, 1)
 heapq.heappush(h, 2)
-heapq.heappop(h)                     # 1 — always returns SMALLEST
+heapq.heappop(h)                     # 1 — always returns SMALLEST (IndexError if empty)
 h[0]                                 # peek at smallest without popping
 
 # ⚠️ A heap is NOT a sorted list. Only h[0] (the min) is meaningful — h[1], h[2]…
@@ -1546,6 +1551,29 @@ with open("big.bin", "rb") as f:
 digest = h.hexdigest()
 ```
 
+#### Did the write succeed? Durability ladder
+
+```python
+# Writes are BUFFERED, so "succeeded" has levels:
+#   f.write(data)   → only in PYTHON's buffer (not even at the OS yet)
+#   f.flush()       → handed to the OS, but still in its page cache (lost on power loss)
+#   os.fsync(fd)    → physically on disk (survives power loss)
+#   exiting `with`  → flush + close, but does NOT fsync
+
+# ⚠️ How you KNOW a write worked: a buffered write often does NOT raise at f.write() —
+# disk-full / I/O errors surface at flush()/close(). So let close() run and DON'T swallow it:
+with open("out.txt", "w") as f:
+    f.write(data)
+# reaching here without an exception = data made it to the OS successfully
+
+# Need it truly durable (DBs, important state)? flush + fsync, then atomic-rename a temp file:
+import os
+with open("out.txt.tmp", "w") as f:
+    f.write(data)
+    f.flush(); os.fsync(f.fileno())  # force to physical disk
+os.replace("out.txt.tmp", "out.txt") # atomic on POSIX (see Pickling for the same pattern)
+```
+
 ### Sockets — TCP is a stream, not messages
 
 `recv()` can return **fewer** bytes than requested, and returns `b""` when the peer closes. You have to build framing yourself.
@@ -1623,7 +1651,7 @@ import json
 
 # In memory: object <-> string  (same dump/dumps naming as pickle)
 s   = json.dumps(obj)                # object → JSON string  (note the 's')
-obj = json.loads(s)                  # JSON string → object
+obj = json.loads(s)                  # JSON string → object  (⚠️ JSONDecodeError on malformed input)
 
 # To/from disk — TEXT mode "w"/"r" (JSON is text, unlike pickle's binary)
 with open("data.json", "w") as f:
@@ -1639,7 +1667,8 @@ json.dumps(obj, ensure_ascii=False)  # keep unicode literal instead of \uXXXX es
 # Type mapping: dict↔object, list/tuple→array, str↔string, int/float↔number,
 #               True/False↔true/false, None↔null
 # ⚠️ tuples come back as LISTS. dict keys come back as STRINGS (JSON keys must be strings).
-# ⚠️ NOT serializable by default: datetime, set, bytes, Decimal, dataclasses, custom objects.
+# ⚠️ NOT serializable by default: datetime, set, bytes, Decimal, dataclasses, custom objects
+#    → dumps() raises TypeError on these unless you pass default= (below).
 
 # Serialize the unsupported types via default= (called for anything json can't handle)
 json.dumps({"when": now}, default=str)          # stringify dates/Decimal/etc.

@@ -1517,6 +1517,54 @@ for coro in asyncio.as_completed(coros):
     print(result)
 ```
 
+### Async iteration & generators
+
+```python
+# Async generator — async def WITH yield. Awaits inside; consumed with `async for`.
+async def fetch_pages(start):
+    url = start
+    while url:
+        page = await get(url)        # can await between yields
+        yield page                   # lazy — one page at a time, O(1) memory
+        url = page.next_url
+
+async for page in fetch_pages(start):    # ⚠️ async for, NOT for (the same `async for` the streams use)
+    process(page)
+
+# Async comprehensions (3.6+) — async for / await inside the comprehension
+pages = [p async for p in fetch_pages(start)]
+kept  = [x async for x in aiter() if await keep(x)]
+
+# Protocol behind it: __aiter__ returns the iterator, __anext__ is a coroutine that raises
+# StopAsyncIteration when done — rarely hand-written; async generators cover real use.
+
+# ⚠️ A plain `for` over an async generator is a TypeError, and you can't `await` the
+#    generator object directly — you iterate it with `async for`.
+```
+
+### Async context managers
+
+```python
+# `async with` — async analog of `with`; __aenter__/__aexit__ can await
+# (acquire from a connection pool, hold an asyncio.Lock, etc.)
+async with pool.acquire() as conn:
+    await conn.execute(...)
+
+# @asynccontextmanager — async version of @contextmanager (see Context managers)
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def connection(dsn):
+    conn = await connect(dsn)        # setup (awaitable)
+    try:
+        yield conn
+    finally:
+        await conn.close()           # teardown runs even on error / cancellation
+
+async with connection(dsn) as conn:
+    await conn.execute(...)
+```
+
 ### Async sync primitives
 
 ```python

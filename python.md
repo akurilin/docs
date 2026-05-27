@@ -1361,6 +1361,17 @@ async def main():
     # all tasks are done when the `async with` block exits
     # if ANY task raises, the others are cancelled, errors collected as ExceptionGroup
     print(t1.result(), t2.result())
+
+# Fan out a worker per item. Unbounded by default — asyncio has no max_workers.
+# To BOUND concurrency, uncomment the semaphore + the `async with sem` line.
+# sem = asyncio.Semaphore(10)              # at most 10 running at once
+async def worker(item):
+    # async with sem:                      # ← uncomment to cap concurrency
+        await process(item)
+
+async with asyncio.TaskGroup() as tg:
+    for item in items:
+        tg.create_task(worker(item))       # created together; run as the gate allows
 ```
 
 Unlike `ThreadPoolExecutor`, a running task can freely call `tg.create_task(...)` to spawn more work into the same group. The `async with` block waits as long as *anything* is still running, so recursive/self-perpetuating task trees work without any explicit "all done" event.
